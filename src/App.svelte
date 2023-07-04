@@ -1,180 +1,108 @@
 <script>
 	import { onMount } from "svelte";
-	import "bootstrap/dist/css/bootstrap.min.css";
+	import { createEventDispatcher } from "svelte";
+	import 'bootstrap/dist/css/bootstrap.min.css';
   
-	let todos = [];
-	let selectedTodo = null; // To keep track of the selected todo
+	let jsonData = [];
+	let tableVisible = false;
+	let selectedJob = null;
+	let idList = [];
+	let selectedCandidate = null;
   
-	onMount(async () => {
+	const dispatch = createEventDispatcher();
+  
+	async function fetchData() {
+	  const response = await fetch("https://api.recruitly.io/api/job?apiKey=TEST64518616D4CF145D4E20BD47169EA7229BA3");
+	  const responseData = await response.json();
+	  jsonData = responseData.data;
+	}
+  
+	async function fetchIdDetails(jobId) {
 	  try {
-		const response = await fetch(
-		  "https://api.recruitly.io/api/job/pipeline/byjob?apiKey=TEST45684CB2A93F41FC40869DC739BD4D126D77&jobApplication=false&jobId=testeb576ee7159440dc91364446af47d696&rejected=false"
-		);
-		const data = await response.json();
-		console.log(data);
-		if (Array.isArray(data)) {
-		  todos = data.map((item) => ({
-			candidateRef: item.candidateRef,
-			candidateLabel: item.candidateLabel,
-			candidateEmail: item.candidateEmail,
-			candidatePhone: item.candidatePhone,
-			candidateOwner: item.candidateOwner,
-		  }));
+		const response = await fetch(`https://api.recruitly.io/api/job/pipeline/byjob?apiKey=TEST45684CB2A93F41FC40869DC739BD4D126D77&jobApplication=false&jobId=${jobId}&rejected=false`);
+  
+		if (response.ok) {
+		  const { data } = await response.json();
+		  console.log(data);
+		  if (Array.isArray(data)) {
+			idList = data.map(item => ({
+			  id: item.id,
+			  jobRef: item.jobRef,
+			  jobTitle: item.jobTitle,
+			  candidateLabel: item.candidateLabel,
+			}));
+		  } else {
+			console.error("Error: Response data is not an array", data);
+		  }
 		} else {
-		  console.error("API response is not in the expected format");
+		  console.error("Error:", response.status);
 		}
 	  } catch (error) {
-		console.error(error);
+		console.error("Error:", error);
 	  }
-	});
-  
-	function showDetails(todo) {
-	  selectedTodo = todo;
 	}
+  
+	async function fetchCandidateDetails(candidateId) {
+	  try {
+		const response = await fetch(`https://api.recruitly.io/api/candidate/${candidateId}?apiKey=TEST45684CB2A93F41FC40869DC739BD4D126D77`);
+  
+		if (response.ok) {
+		  const { data } = await response.json();
+		  // Handle candidate details data
+		  console.log(data);
+		} else {
+		  console.error("Error:", response.status);
+		}
+	  } catch (error) {
+		console.error("Error:", error);
+	  }
+	}
+  
+	function handleTitleClick(job) {
+	  selectedJob = job;
+	  fetchIdDetails(job.id);
+	  openJobPipelineInNewTab(job.id);
+	}
+  
+	function openCandidateDetails(candidate) {
+	  selectedCandidate = candidate;
+	  fetchCandidateDetails(candidate.id); // Fetch candidate details
+	}
+  
+	onMount(async () => {
+	  await fetchData();
+	  tableVisible = true;
+	});
   </script>
   
-  <div class="table-responsive">
-	<div class="table">
-	  <div class="horizontal-table">
-		<div class="card">
-		  <label class="card-title text-primary" for="shortlisted">Shortlisted</label>
-		  {#each todos.filter((todo) => todo.status === 0) as todo, index}
-		  <div class="vertical-table">
-			<div class="card">
-			  <p>{todo.candidateRef}</p>
-			  <p>
-				<a href="#Job_pipeline" on:click={() => showDetails(todo)}>
-				  {todo.candidateLabel}
-				</a>
-			  </p>
-			  <p>{todo.candidateEmail}</p>
-			  <p>{todo.candidatePhone}</p>
-			</div>
-		  </div>
-		  {/each}
-		</div>
-  
-		<div class="card">
-			<label class="card-title text-primary" for="sourced">Sourced</label>
-			{#each todos.filter((todo) => todo.status === 1) as todo, index}
-			<div class="vertical-table">
-			  <div class="card">
-				<p>{todo.candidateRef}</p>
-				<p>
-				  <a href="#Job_pipeline" on:click="{() => showDetails(todo)}">{todo.candidateLabel}</a>
-				</p>
-				<p>{todo.candidateEmail}</p>
-				<p>{todo.candidatePhone}</p>
-			  </div>
-			</div>
-			{/each}
-		  </div>
-
-		  <div class="card">
-			<label class="card-title text-primary" for="applied">Applied</label>
-			{#each todos.filter((todo) => todo.status === 2) as todo, index}
-			<div class="vertical-table">
-			  <div class="card">
-				<p>{todo.candidateRef}</p>
-				<p>
-				  <a href="#Job_pipeline" on:click="{() => showDetails(todo)}">{todo.candidateLabel}</a>
-				</p>
-				<p>{todo.candidateEmail}</p>
-				<p>{todo.candidatePhone}</p>
-			  </div>
-			</div>
-			{/each}
-		  </div>
-
-		  <div class="card">
-			<label class="card-title text-primary" for="cv shared">CV Shared</label>
-			{#each todos.filter((todo) => todo.status === 3) as todo, index}
-			<div class="vertical-table">
-			  <div class="card">
-				<p>{todo.candidateRef}</p>
-				<p>
-				  <a href="#Job_pipeline" on:click="{() => showDetails(todo)}">{todo.candidateLabel}</a>
-				</p>
-				<p>{todo.candidateEmail}</p>
-				<p>{todo.candidatePhone}</p>
-			  </div>
-			</div>
-			{/each}
-		  </div>
-
-		  <div class="card">
-			<label class="card-title text-primary" for="interview">Interview</label>
-			{#each todos.filter((todo) => todo.status === 4) as todo, index}
-			<div class="vertical-table">
-			  <div class="card">
-				<p>{todo.candidateRef}</p>
-				<p>
-				  <a href="#Job_pipeline" on:click="{() => showDetails(todo)}">{todo.candidateLabel}</a>
-				</p>
-				<p>{todo.candidateEmail}</p>
-				<p>{todo.candidatePhone}</p>
-			  </div>
-			</div>
-			{/each}
-		  </div>
-
-		  <div class="card">
-			<label class="card-title text-primary" for="offer">Offer</label>
-			{#each todos.filter((todo) => todo.status === 5) as todo, index}
-			<div class="vertical-table">
-			  <div class="card">
-				<p>{todo.candidateRef}</p>
-				<p>
-				  <a href="#Job_pipeline" on:click="{() => showDetails(todo)}">{todo.candidateLabel}</a>
-				</p>
-				<p>{todo.candidateEmail}</p>
-				<p>{todo.candidatePhone}</p>
-			  </div>
-			</div>
-			{/each}
-		  </div>
-
-	  </div>
-	</div>
-  </div>
-  
-  {#if selectedTodo}
-  <div class="popup">
-	<h1 class="left-align" style="color: darkblue;">Name:</h1>
-	<p class="popup-text-top" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidateLabel}
-	</p>
-	<h1 class="left-align" style="color: darkblue;">Reference:</h1>
-	<p class="popup-text" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidateRef}
-	</p>
-	<h1 class="left-align" style="color: darkblue;">ID:</h1>
-	<p class="popup-text" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidateId}
-	</p>
-  
-	<h1 class="left-align" style="color: darkblue;">Owner Name:</h1>
-	<p class="popup-text" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidateOwner}
-	</p>
-	<h1 class="left-align" style="color: darkblue;">Phone:</h1>
-	<p class="popup-text" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidatePhone}
-	</p>
-	<h1 class="left-align" style="color: darkblue;">Email:</h1>
-	<p class="popup-text-bottom" style="font: 1.3em sans-serif;">
-	  {selectedTodo.candidateEmail}
-	</p>
-	<button class="btn btn-primary" on:click={() => (selectedTodo = null)}>
-	  Close
-	</button>
-  </div>
-  {/if}
-  
   <style>
-	.left-align {
-	  text-align: left;
-	  font: 1.5em sans-serif;
+	.popup {
+	  position: fixed;
+	  top: 0;
+	  left: 0;
+	  width: 100%;
+	  height: 100%;
+	  background-color: rgba(0, 0, 0, 0.5);
+	  display: flex;
+	  justify-content: center;
+	  align-items: center;
+	}
+  
+	.popup-content {
+	  background-color: rgb(242, 243, 244);
+	  padding: 20px;
+	  border-radius: 5px;
+	}
+  
+	.container {
+	  max-width: 100%;
+	  overflow: auto;
+	}
+  
+	.horizontal-table {
+	  display: flex;
+	  flex-direction: row;
+	  overflow-x: auto;
 	}
   
 	.card {
@@ -185,30 +113,129 @@
 	  width: 150px;
 	}
   
-	.horizontal-table {
-	  display: flex;
-	  flex-direction: row;
-	  overflow-x: auto;
-	}
-  
-	.vertical-table {
-	  display: flex;
-	  flex-direction: column;
-	  align-items: center;
-	}
-  
-	.popup {
+	/* Additional styles for the modal */
+	.modal {
 	  position: fixed;
-	  top: 50%;
-	  left: 50%;
-	  transform: translate(-50%, -50%);
-	  background-color: #f6f3f4;
-	  padding: 5px;
-	  border-radius: 5px;
-	  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+	  top: 0;
+	  left: 0;
+	  width: 100vw;
+	  height: 100vh;
+	  display: flex;
+	  align-items: center;
+	  justify-content: center;
 	  z-index: 999;
-	  height: 80vh;
-	  width: 60vh;
+	  background-color: rgba(0, 0, 0, 0.5);
+	}
+  
+	.modal-content {
+	  background-color: #fff;
+	  padding: 20px;
+	  border-radius: 5px;
+	  max-width: 80%;
+	  max-height: 80%;
+	  overflow: auto;
+	}
+  
+	.candidate-name {
+	  cursor: pointer;
+	  color: blue;
+	  text-decoration: underline;
+	}
+  
+	.candidate-details {
+	  margin-top: 10px;
+	  padding: 10px;
+	  border: 1px solid #ccc;
+	  border-radius: 5px;
 	}
   </style>
+  
+  <main class="container mt-4">
+	{#if tableVisible}
+	  <table class="table">
+		<thead class="thead-light">
+		  <tr>
+			<th>ID</th>
+			<th>Title</th>
+			<th>Reference</th>
+			<th>Status</th>
+			<th>Industry</th>
+		  </tr>
+		</thead>
+		<tbody>
+		  {#each jsonData as job}
+			<tr>
+			  <td>{job.id}</td>
+			  <td>
+				<a href="#" on:click|preventDefault={() => handleTitleClick(job)}>{job.title}</a>
+			  </td>
+			  <td>{job.reference}</td>
+			  <td>{job.status}</td>
+			  <td>{job.industry}</td>
+			</tr>
+		  {/each}
+		</tbody>
+	  </table>
+	{/if}
+  </main>
+  
+  {#if selectedJob}
+  <div class="popup">
+	<div class="popup-content">
+	  <div class="table-responsive">
+		<div class="table">
+		  <div class="horizontal-table">
+			<div class="card">
+			  <label class="card-title text-primary">Sourced</label>
+			</div>
+			<div class="card">
+				<label class="card-title text-primary">Applied</label>
+			  </div>
+			  <div class="card">
+				<label class="card-title text-primary">CV Shared</label>
+			  </div>
+			<div class="card">
+			  <label class="card-title text-primary">Interview</label>
+			  {#each idList as job}
+			  <div class="card">
+				<p>{job.jobRef}</p>
+				<p>{job.jobTitle}</p>
+				<p class="candidate-name" on:click={() => openCandidateDetails(job)}>
+				  {job.candidateLabel}
+				</p>
+			  </div>
+			  {/each}
+			</div>
+			<div class="card">
+				<label class="card-title text-primary">Shortlist</label>
+			  </div>
+			  <div class="card">
+				<label class="card-title text-primary">Offer</label>
+			  </div>
+			  <div class="card">
+				<label class="card-title text-primary">Placed</label>
+			  </div>
+		  </div>
+		</div>
+	  </div>
+	  <button class="btn btn-primary" on:click={() => (selectedJob = null)}>Close</button>
+	</div>
+  </div>
+  {/if}
+  
+  {#if selectedCandidate}
+  <div class="modal">
+	<div class="modal-content">
+	  <div class="candidate-details">
+		<!-- Display candidate details here -->
+		<h3>Candidate Details</h3>
+		<p>ID: {selectedCandidate.id}</p>
+		<p>Job Reference: {selectedCandidate.jobRef}</p>
+		<p>Job Title: {selectedCandidate.jobTitle}</p>
+		<p>Candidate Label: {selectedCandidate.candidateLabel}</p>
+	  </div>
+	  <button class="btn btn-primary" on:click={() => (selectedCandidate = null)}>Close</button>
+	</div>
+  </div>
+  {/if}
   
